@@ -15,15 +15,18 @@ namespace WebPagesDownloader
 {
     class Program
     {
-        public static List<string> GetImagesLinks(HtmlDocument document, string pageUrl)
+        public static List<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string argument)
         {
             List<string> imageLinks = new List<string>();
 
-            foreach (var image in document.DocumentNode.SelectNodes("//img").Select(link => link.Attributes["src"].Value))
+            foreach (var image in document.DocumentNode.SelectNodes(argument).Select(link => link.Attributes["src"]?.Value))
             {
-
                 //TODO: Create normal uri creater
-                if (image[0] == '/' && image[1] == '/')
+                if (image.Contains("http"))
+                {
+                    imageLinks.Add(image);
+                }
+                else if (image[0] == '/' && image[1] == '/')
                 {
                     imageLinks.Add("https:" + image);
                 }
@@ -42,7 +45,12 @@ namespace WebPagesDownloader
             foreach (var cssLink in document.DocumentNode.SelectNodes("//link[@rel]").Where(link => link.Attributes["rel"].Value == "stylesheet").Select(link => link.Attributes["href"].Value))
             {
                 //TODO: normal uri creater 
-                if (cssLink[0] == '/' && cssLink[1] == '/')
+
+                if (cssLink.Contains("http"))
+                {
+                    cssLinks.Add(cssLink);
+                }
+                else if (cssLink[0] == '/' && cssLink[1] == '/')
                 {
                     cssLinks.Add("https:" + cssLink);
                 }
@@ -124,13 +132,10 @@ namespace WebPagesDownloader
         {
             //int threadNum = Convert.ToInt32(ConfigurationManager.AppSettings.Get("numOfThreads"));
 
-            var pageUrl = "https://en.wikipedia.org/wiki/Dog";
-            var uri = new Uri(pageUrl);
+            var pageUrl = "https://stackoverflow.com/questions/13565069/parse-relative-uri";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
-
-            //Test();
 
             //TODO: check imposible charts of the directory
             //creates folder with all images and scripts
@@ -141,12 +146,14 @@ namespace WebPagesDownloader
             Directory.CreateDirectory(filesPath);
 
             //<---Search links of images and css--->
-            var imageLinks = GetImagesLinks(document, pageUrl);
+            var imageLinks = GetLinksWithArgument(document, pageUrl, "//img");
+            var scriptLinks = GetLinksWithArgument(document, pageUrl, "//script[@src]");
             var cssLinks = GetCssLinks(document, pageUrl);
 
             //<---Starts Download--->
             LinkDownloader(imageLinks, filesPath);
             LinkDownloader(cssLinks, filesPath);
+            LinkDownloader(scriptLinks, folderPath);
             ChangeAllImagesInHtml(document, folderPath);
             ChangeAllCssInHtml(document, folderPath);
             File.WriteAllText(path, document.DocumentNode.OuterHtml);
