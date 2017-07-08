@@ -15,11 +15,11 @@ namespace WebPagesDownloader
 {
     class Program
     {
-        public static List<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string argument)
+        public static List<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string nodeName, string subNodeName)
         {
             List<string> imageLinks = new List<string>();
 
-            foreach (var image in document.DocumentNode.SelectNodes(argument).Select(link => link.Attributes["src"]?.Value))
+            foreach (var image in document.DocumentNode.SelectNodes(nodeName).Select(link => link.Attributes[subNodeName]?.Value))
             {
                 //TODO: Create normal uri creater
                 if (image.Contains("http"))
@@ -36,31 +36,6 @@ namespace WebPagesDownloader
                 }
             }
             return imageLinks;
-        }
-
-        public static List<string> GetCssLinks(HtmlDocument document, string pageUrl)
-        {
-            List<string> cssLinks = new List<string>();
-
-            foreach (var cssLink in document.DocumentNode.SelectNodes("//link[@rel]").Where(link => link.Attributes["rel"].Value == "stylesheet").Select(link => link.Attributes["href"].Value))
-            {
-                //TODO: normal uri creater 
-
-                if (cssLink.Contains("http"))
-                {
-                    cssLinks.Add(cssLink);
-                }
-                else if (cssLink[0] == '/' && cssLink[1] == '/')
-                {
-                    cssLinks.Add("https:" + cssLink);
-                }
-                else
-                {
-                    cssLinks.Add("https://" + new Uri(pageUrl).Host + cssLink);
-                }
-
-            }
-            return cssLinks;
         }
 
         public static void ChangeAllImagesInHtml(HtmlDocument document, string filesPath)
@@ -102,14 +77,11 @@ namespace WebPagesDownloader
                 try
                 {
                     using (WebClient client = new WebClient())
-                    {
-                        Console.WriteLine(item);
+                    {                        
                         var path = GetFileName(item);
-
-
                         if (!sameLinksCounter.ContainsKey(path))
                         {
-                            sameLinksCounter.Add(path, 1);
+                            sameLinksCounter.Add(path, 1);                            
                             client.DownloadFile(item, filesPath + @"\" + path);
                         }
                         else
@@ -119,7 +91,7 @@ namespace WebPagesDownloader
                         }
 
                     }
-                    //Console.WriteLine("Succes download: " + item);
+                    Console.WriteLine("Succes to download: " + item);
                 }
                 catch (Exception exception)
                 {
@@ -132,7 +104,7 @@ namespace WebPagesDownloader
         {
             //int threadNum = Convert.ToInt32(ConfigurationManager.AppSettings.Get("numOfThreads"));
 
-            var pageUrl = "https://stackoverflow.com/questions/13565069/parse-relative-uri";
+            var pageUrl = "https://en.wikipedia.org/wiki/Dog";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
@@ -145,10 +117,12 @@ namespace WebPagesDownloader
             var filesPath = @"D:\My\Desktop\tmp\" + folderPath;
             Directory.CreateDirectory(filesPath);
 
+            Test();
+
             //<---Search links of images and css--->
-            var imageLinks = GetLinksWithArgument(document, pageUrl, "//img");
-            var scriptLinks = GetLinksWithArgument(document, pageUrl, "//script[@src]");
-            var cssLinks = GetCssLinks(document, pageUrl);
+            var imageLinks = GetLinksWithArgument(document, pageUrl, "//img", "src");
+            var scriptLinks = GetLinksWithArgument(document, pageUrl, "//script[@src]", "src");
+            var cssLinks = GetLinksWithArgument(document, pageUrl,"//link[@rel='stylesheet']", "href");
 
             //<---Starts Download--->
             LinkDownloader(imageLinks, filesPath);
@@ -161,7 +135,13 @@ namespace WebPagesDownloader
 
         public static void Test()
         {
+            using (WebClient client = new WebClient())
+            {
+                var path = GetFileName(
+                    "https://en.wikipedia.org/w/load.php?debug=false&lang=en&modules=startup&only=scripts&skin=vector");
+                client.DownloadFile("https://en.wikipedia.org/w/load.php?debug=false&lang=en&modules=startup&only=scripts&skin=vector", @"D:\My\Desktop\tmp" + @"\" + path);
 
+            }
         }
 
         public static string GetFileName(string url)
