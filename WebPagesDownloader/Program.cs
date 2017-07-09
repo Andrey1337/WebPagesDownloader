@@ -101,20 +101,17 @@ namespace WebPagesDownloader
         }
 
         static void Main(string[] args)
-        {
-            //int threadNum = Convert.ToInt32(ConfigurationManager.AppSettings.Get("numOfThreads"));
-
+        {          
             var pageUrl = "https://en.wikipedia.org/wiki/Dog";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
 
-            //TODO: check imposible charts of the directory
             //creates folder with all images and scripts
             var fileName = document.DocumentNode.SelectSingleNode("//title").InnerHtml;
-            var path = @"D:\My\Desktop\tmp\" + fileName + ".html";
+            var path = @"D:\My\Desktop\tmp\" + GetFileName(fileName) + ".html";
             var folderPath = fileName + "_files";
-            var filesPath = @"D:\My\Desktop\tmp\" + folderPath;
+            var filesPath = @"D:\My\Desktop\tmp\" + GetFileName(folderPath);
             Directory.CreateDirectory(filesPath);
 
             Test();
@@ -145,8 +142,7 @@ namespace WebPagesDownloader
         }
 
         public static string GetFileName(string url)
-        {
-
+        {       
             var lastPartOfUrlRegex = new Regex("[^/]+(?=/$|$)");
             string lastPart = lastPartOfUrlRegex.Match(url).Result("$0");
             //var untilSymbol = new Regex(".+?(?="+Regex.Escape("?")+")");
