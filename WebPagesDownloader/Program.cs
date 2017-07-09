@@ -58,18 +58,18 @@ namespace WebPagesDownloader
                 if (cssLinkCounter.ContainsKey(GetFileName(link)))
                 {
                     cssLinkCounter[GetFileName(link)]++;
-                    cssLink.SetAttributeValue("href", filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + cssLinkCounter[GetFileName(link)] + Path.GetExtension(GetFileName(link)));
+                    cssLink.SetAttributeValue("href", filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + cssLinkCounter[GetFileName(link)] + ".css");
 
                 }
                 else
                 {
                     cssLinkCounter.Add(GetFileName(link), 1);
-                    cssLink.SetAttributeValue("href", filesPath + @"\" + GetFileName(link));
+                    cssLink.SetAttributeValue("href", filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + ".css");
                 }
             }
         }
 
-        public static void LinkDownloader(List<string> linksUrlList, string filesPath)
+        public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
         {
             Dictionary<string, int> sameLinksCounter = new Dictionary<string, int>();
             foreach (var item in linksUrlList)
@@ -77,11 +77,17 @@ namespace WebPagesDownloader
                 try
                 {
                     using (WebClient client = new WebClient())
-                    {                        
-                        var path = GetFileName(item);
+                    {
+                        string path = GetFileName(item);
+
+                        if (extension != "default")
+                        {
+                            path = Path.GetFileNameWithoutExtension(path) + extension;
+                        }
+                    
                         if (!sameLinksCounter.ContainsKey(path))
                         {
-                            sameLinksCounter.Add(path, 1);                            
+                            sameLinksCounter.Add(path, 1);
                             client.DownloadFile(item, filesPath + @"\" + path);
                         }
                         else
@@ -101,30 +107,32 @@ namespace WebPagesDownloader
         }
 
         static void Main(string[] args)
-        {          
+        {
             var pageUrl = "https://en.wikipedia.org/wiki/Dog";
+            var downloadDir = @"D:\My\Desktop\tmp\";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
 
             //creates folder with all images and scripts
             var fileName = document.DocumentNode.SelectSingleNode("//title").InnerHtml;
-            var path = @"D:\My\Desktop\tmp\" + GetFileName(fileName) + ".html";
+            var path = downloadDir + fileName + ".html";
             var folderPath = fileName + "_files";
-            var filesPath = @"D:\My\Desktop\tmp\" + GetFileName(folderPath);
+            var filesPath = downloadDir + folderPath;
             Directory.CreateDirectory(filesPath);
 
-            Test();
+            //Test();
 
             //<---Search links of images and css--->
             var imageLinks = GetLinksWithArgument(document, pageUrl, "//img", "src");
             var scriptLinks = GetLinksWithArgument(document, pageUrl, "//script[@src]", "src");
-            var cssLinks = GetLinksWithArgument(document, pageUrl,"//link[@rel='stylesheet']", "href");
+            var cssLinks = GetLinksWithArgument(document, pageUrl, "//link[@rel='stylesheet']", "href");
 
             //<---Starts Download--->
             LinkDownloader(imageLinks, filesPath);
-            LinkDownloader(cssLinks, filesPath);
-            LinkDownloader(scriptLinks, folderPath);
+            LinkDownloader(cssLinks, filesPath, ".css");
+            LinkDownloader(scriptLinks, filesPath);
+
             ChangeAllImagesInHtml(document, folderPath);
             ChangeAllCssInHtml(document, folderPath);
             File.WriteAllText(path, document.DocumentNode.OuterHtml);
@@ -142,7 +150,7 @@ namespace WebPagesDownloader
         }
 
         public static string GetFileName(string url)
-        {       
+        {
             var lastPartOfUrlRegex = new Regex("[^/]+(?=/$|$)");
             string lastPart = lastPartOfUrlRegex.Match(url).Result("$0");
             //var untilSymbol = new Regex(".+?(?="+Regex.Escape("?")+")");
