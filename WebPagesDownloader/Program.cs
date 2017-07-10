@@ -15,27 +15,24 @@ namespace WebPagesDownloader
 {
     class Program
     {
+        //TODO: fix GetLegalUri function
+        public static string GetLegalUri(string uri, string pageUrl)
+        {
+            if (uri.Contains("http"))
+            {
+                return uri;
+            }
+            if (uri[0] == '/' && uri[1] == '/')
+            {
+                return "https:" + uri;
+            }
+
+            return "https://" + new Uri(pageUrl).Authority + uri;
+        }
+
         public static List<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string nodeName, string subNodeName)
         {
-            List<string> imageLinks = new List<string>();
-
-            foreach (var image in document.DocumentNode.SelectNodes(nodeName).Select(link => link.Attributes[subNodeName]?.Value))
-            {
-                //TODO: Create normal uri creater
-                if (image.Contains("http"))
-                {
-                    imageLinks.Add(image);
-                }
-                else if (image[0] == '/' && image[1] == '/')
-                {
-                    imageLinks.Add("https:" + image);
-                }
-                else
-                {
-                    imageLinks.Add("https://" + new Uri(pageUrl).Authority + image);
-                }
-            }
-            return imageLinks;
+            return document.DocumentNode.SelectNodes(nodeName).Select(link => link.Attributes[subNodeName]?.Value).Select(link => GetLegalUri(link, pageUrl)).ToList();
         }
 
         public static void ChangeAllImagesInHtml(HtmlDocument document, string filesPath)
@@ -51,7 +48,7 @@ namespace WebPagesDownloader
         {
             var cssLinkCounter = new Dictionary<string, int>();
 
-            foreach (var cssLink in document.DocumentNode.SelectNodes("//link[@rel]").Where(link => link.Attributes["rel"].Value == "stylesheet"))
+            foreach (var cssLink in document.DocumentNode.SelectNodes("//link[@rel='stylesheet']"))
             {
                 var link = cssLink.GetAttributeValue("href", null);
 
@@ -84,7 +81,7 @@ namespace WebPagesDownloader
                         {
                             path = Path.GetFileNameWithoutExtension(path) + extension;
                         }
-                    
+
                         if (!sameLinksCounter.ContainsKey(path))
                         {
                             sameLinksCounter.Add(path, 1);
@@ -108,20 +105,21 @@ namespace WebPagesDownloader
 
         static void Main(string[] args)
         {
-            var pageUrl = "https://en.wikipedia.org/wiki/Dog";
+            var pageUrl = "https://stackoverflow.com/questions/44863822/how-can-i-download-the-web-page-with-the-html-javascript-and-css?noredirect=1#comment76707076_44863822";
             var downloadDir = @"D:\My\Desktop\tmp\";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
 
             //creates folder with all images and scripts
-            var fileName = document.DocumentNode.SelectSingleNode("//title").InnerHtml;
+            var fileName = GetFileName(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
             var path = downloadDir + fileName + ".html";
             var folderPath = fileName + "_files";
             var filesPath = downloadDir + folderPath;
             Directory.CreateDirectory(filesPath);
 
             //Test();
+            GetJavascriptLinks(document, pageUrl);
 
             //<---Search links of images and css--->
             var imageLinks = GetLinksWithArgument(document, pageUrl, "//img", "src");
@@ -129,8 +127,11 @@ namespace WebPagesDownloader
             var cssLinks = GetLinksWithArgument(document, pageUrl, "//link[@rel='stylesheet']", "href");
 
             //<---Starts Download--->
+            Console.WriteLine("Images:");
             LinkDownloader(imageLinks, filesPath);
+            Console.WriteLine("Css:");
             LinkDownloader(cssLinks, filesPath, ".css");
+            Console.WriteLine("Scripts:");
             LinkDownloader(scriptLinks, filesPath);
 
             ChangeAllImagesInHtml(document, folderPath);
@@ -145,7 +146,6 @@ namespace WebPagesDownloader
                 var path = GetFileName(
                     "https://en.wikipedia.org/w/load.php?debug=false&lang=en&modules=startup&only=scripts&skin=vector");
                 client.DownloadFile("https://en.wikipedia.org/w/load.php?debug=false&lang=en&modules=startup&only=scripts&skin=vector", @"D:\My\Desktop\tmp" + @"\" + path);
-
             }
         }
 
