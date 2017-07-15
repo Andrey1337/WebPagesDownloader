@@ -35,40 +35,42 @@ namespace WebPagesDownloader
             return document.DocumentNode.SelectNodes(nodeName).Select(link => link.Attributes[subNodeName]?.Value).Select(link => GetLegalUri(link, pageUrl)).ToList();
         }
 
-        public static void ChangeAllImagesInHtml(HtmlDocument document, string filesPath)
+        public static void ChangeSubNodesInHtml(HtmlDocument document, string filesPath, string nodeName, string subNodeName, string arg = "default")
         {
-            foreach (var item in document.DocumentNode.SelectNodes("//img"))
+            var linkCounter = new Dictionary<string, int>();
+
+            foreach (var node in document.DocumentNode.SelectNodes(nodeName))
             {
-                var imagePath = GetFileName(item.GetAttributeValue("src", null));
-                item.SetAttributeValue("src", filesPath + @"\" + imagePath);
-            }
-        }
+                var link = node.GetAttributeValue(subNodeName, null);
+                if (link == null)
+                    continue;
+                if (arg != "default")
+                    link = Path.GetFileNameWithoutExtension(GetFileName(link)) + arg;
 
-        public static void ChangeAllCssInHtml(HtmlDocument document, string filesPath)
-        {
-            var cssLinkCounter = new Dictionary<string, int>();
-
-            foreach (var cssLink in document.DocumentNode.SelectNodes("//link[@rel='stylesheet']"))
-            {
-                var link = cssLink.GetAttributeValue("href", null);
-
-                if (cssLinkCounter.ContainsKey(GetFileName(link)))
+                if (linkCounter.ContainsKey(GetFileName(link)))
                 {
-                    cssLinkCounter[GetFileName(link)]++;
-                    cssLink.SetAttributeValue("href", filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + cssLinkCounter[GetFileName(link)] + ".css");
-
+                    linkCounter[GetFileName(link)]++;
+                    node.SetAttributeValue(subNodeName, filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + linkCounter[GetFileName(link)] + Path.GetExtension(GetFileName(link)));
                 }
                 else
                 {
-                    cssLinkCounter.Add(GetFileName(link), 1);
-                    cssLink.SetAttributeValue("href", filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + ".css");
+                    linkCounter.Add(GetFileName(link), 1);
+                    node.SetAttributeValue(subNodeName, filesPath + @"\" + Path.GetFileName(GetFileName(link)));
                 }
+            }
+        }
+
+        public static void GetJavascript(HtmlDocument document)
+        {
+            foreach (var link in document.DocumentNode.SelectNodes("//script").Select(link => link.Attributes["src"]?.Value))
+            {
+                Console.WriteLine(link);
             }
         }
 
         public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
         {
-            Dictionary<string, int> sameLinksCounter = new Dictionary<string, int>();
+            var sameLinksCounter = new Dictionary<string, int>();
             foreach (var item in linksUrlList)
             {
                 try
@@ -105,8 +107,8 @@ namespace WebPagesDownloader
 
         static void Main(string[] args)
         {
-            var pageUrl = "https://stackoverflow.com/questions/44863822/how-can-i-download-the-web-page-with-the-html-javascript-and-css?noredirect=1#comment76707076_44863822";
-            var downloadDir = @"D:\My\Desktop\tmp\";
+            const string pageUrl = "https://en.wikipedia.org/wiki/Cat";
+            const string downloadDir = @"D:\My\Desktop\tmp\";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
@@ -118,8 +120,6 @@ namespace WebPagesDownloader
             var filesPath = downloadDir + folderPath;
             Directory.CreateDirectory(filesPath);
 
-            //Test();
-            GetJavascriptLinks(document, pageUrl);
 
             //<---Search links of images and css--->
             var imageLinks = GetLinksWithArgument(document, pageUrl, "//img", "src");
@@ -134,30 +134,19 @@ namespace WebPagesDownloader
             Console.WriteLine("Scripts:");
             LinkDownloader(scriptLinks, filesPath);
 
-            ChangeAllImagesInHtml(document, folderPath);
-            ChangeAllCssInHtml(document, folderPath);
+            ChangeSubNodesInHtml(document, folderPath, "//img", "src");
+            ChangeSubNodesInHtml(document, folderPath, "//link[@rel='stylesheet']", "href", ".css");
+            ChangeSubNodesInHtml(document, folderPath, "//script[@src]", "src");
             File.WriteAllText(path, document.DocumentNode.OuterHtml);
-        }
-
-        public static void Test()
-        {
-            using (WebClient client = new WebClient())
-            {
-                var path = GetFileName(
-                    "https://en.wikipedia.org/w/load.php?debug=false&lang=en&modules=startup&only=scripts&skin=vector");
-                client.DownloadFile("https://en.wikipedia.org/w/load.php?debug=false&lang=en&modules=startup&only=scripts&skin=vector", @"D:\My\Desktop\tmp" + @"\" + path);
-            }
         }
 
         public static string GetFileName(string url)
         {
             var lastPartOfUrlRegex = new Regex("[^/]+(?=/$|$)");
-            string lastPart = lastPartOfUrlRegex.Match(url).Result("$0");
-            //var untilSymbol = new Regex(".+?(?="+Regex.Escape("?")+")");
-            //var fileName = untilSymbol.Match(lastPart).Result("$0");
-            var removeIllegalChars = new Regex("[^a-zA-Z0-9.-]");
+            var lastPart = lastPartOfUrlRegex.Match(url).Result("$0");
             var fileName = lastPart.Split('?')[0];
-            return removeIllegalChars.Replace(fileName, "");
+            var regex = new Regex(@"[\\/:*?""<>|]");
+            return regex.Replace(fileName, "");
         }
     }
 }
