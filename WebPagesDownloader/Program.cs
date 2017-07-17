@@ -167,11 +167,9 @@ namespace WebPagesDownloader
 
                 }
             }
-
-
-
             return new Tuple<HtmlDocument, string>(doc, charset);
         }
+
         public static byte[] ReadFully(Stream input)
         {
             byte[] buffer = new byte[16 * 1024];
