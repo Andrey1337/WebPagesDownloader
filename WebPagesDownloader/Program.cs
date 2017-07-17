@@ -180,7 +180,7 @@ namespace WebPagesDownloader
                 {
                     ms.Write(buffer, 0, read);
                 }
-                return ms.ToArray();
+                return ms.ToArray(); 
             }
         }
 
