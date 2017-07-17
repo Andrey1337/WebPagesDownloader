@@ -9,6 +9,8 @@ using System.IO;
 using System.Configuration;
 using System.Collections.Specialized;
 using System.Text.RegularExpressions;
+using System.Web;
+using System.Xml.Linq;
 using HtmlAgilityPack;
 
 namespace WebPagesDownloader
@@ -60,14 +62,6 @@ namespace WebPagesDownloader
             }
         }
 
-        public static void GetJavascript(HtmlDocument document)
-        {
-            foreach (var link in document.DocumentNode.SelectNodes("//script").Select(link => link.Attributes["src"]?.Value))
-            {
-                Console.WriteLine(link);
-            }
-        }
-
         public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
         {
             var sameLinksCounter = new Dictionary<string, int>();
@@ -105,16 +99,19 @@ namespace WebPagesDownloader
             }
         }
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            const string pageUrl = "https://en.wikipedia.org/wiki/Cat";
+            const string pageUrl = "http://www.dogsworld.co.il/dogs-info.asp";
             const string downloadDir = @"D:\My\Desktop\tmp\";
 
-            var web = new HtmlWeb();
-            var document = web.Load(pageUrl);
+            var tuple = GetHtmlDocument(pageUrl);
+            var document = tuple.Item1;
+
+            Console.WriteLine(tuple.Item2);
 
             //creates folder with all images and scripts
             var fileName = GetFileName(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
+            Console.WriteLine(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
             var path = downloadDir + fileName + ".html";
             var folderPath = fileName + "_files";
             var filesPath = downloadDir + folderPath;
@@ -127,17 +124,19 @@ namespace WebPagesDownloader
             var cssLinks = GetLinksWithArgument(document, pageUrl, "//link[@rel='stylesheet']", "href");
 
             //<---Starts Download--->
-            Console.WriteLine("Images:");
-            LinkDownloader(imageLinks, filesPath);
-            Console.WriteLine("Css:");
-            LinkDownloader(cssLinks, filesPath, ".css");
-            Console.WriteLine("Scripts:");
-            LinkDownloader(scriptLinks, filesPath);
+            //Console.WriteLine("Images:");
+            //LinkDownloader(imageLinks, filesPath);
+            //Console.WriteLine("Css:");
+            //LinkDownloader(cssLinks, filesPath, ".css");
+            //Console.WriteLine("Scripts:");
+            //LinkDownloader(scriptLinks, filesPath);
 
+
+            //<---Change SubNodes--->
             ChangeSubNodesInHtml(document, folderPath, "//img", "src");
             ChangeSubNodesInHtml(document, folderPath, "//link[@rel='stylesheet']", "href", ".css");
             ChangeSubNodesInHtml(document, folderPath, "//script[@src]", "src");
-            File.WriteAllText(path, document.DocumentNode.OuterHtml);
+            File.WriteAllText(path, document.DocumentNode.OuterHtml, Encoding.GetEncoding(tuple.Item2));
         }
 
         public static string GetFileName(string url)
@@ -148,5 +147,44 @@ namespace WebPagesDownloader
             var regex = new Regex(@"[\\/:*?""<>|]");
             return regex.Replace(fileName, "");
         }
+
+        public static Tuple<HtmlDocument, string> GetHtmlDocument(string url)
+        {
+            string charset;
+            var webRequest = (HttpWebRequest)WebRequest.Create(url);
+            HtmlDocument doc = new HtmlDocument();
+            using (HttpWebResponse response = (HttpWebResponse)webRequest.GetResponse())
+            {
+                using (var reader = new StreamReader(response.GetResponseStream(), Encoding.GetEncoding(response.CharacterSet)))
+                {
+                    //var text = reader.ReadToEnd();
+                    //File.WriteAllText(@"D:\My\Desktop\tmp\index.txt", text, Encoding.GetEncoding(response.CharacterSet));
+                    //doc.Load(@"D:\My\Desktop\tmp\index.txt", Encoding.GetEncoding(response.CharacterSet));
+                    byte[] text = ReadFully(reader.BaseStream);
+                    Console.WriteLine(text.ToString());
+                    doc.Load(reader.BaseStream, Encoding.GetEncoding("iso-8859-8"));
+                    charset = response.CharacterSet;
+
+                }
+            }
+
+
+
+            return new Tuple<HtmlDocument, string>(doc, charset);
+        }
+        public static byte[] ReadFully(Stream input)
+        {
+            byte[] buffer = new byte[16 * 1024];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int read;
+                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
+            }
+        }
+
     }
 }
