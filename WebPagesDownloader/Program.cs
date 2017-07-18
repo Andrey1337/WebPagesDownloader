@@ -17,8 +17,7 @@ using HtmlAgilityPack;
 namespace WebPagesDownloader
 {
     class Program
-    {
-        //TODO: fix GetLegalUri function
+    {        
         public static string GetAbsoluteUrl(string baseLink, string myLink)
         {
             Uri baseUri = new Uri(baseLink);
@@ -83,7 +82,6 @@ namespace WebPagesDownloader
                             sameLinksCounter[path]++;
                             client.DownloadFile(item, filesPath + @"\" + Path.GetFileNameWithoutExtension(path) + "_" + sameLinksCounter[path] + Path.GetExtension(path));
                         }
-
                     }
                     Console.WriteLine("Succes to download: " + item);
                 }
@@ -154,16 +152,7 @@ namespace WebPagesDownloader
                     //var text = reader.ReadToEnd();
                     //File.WriteAllText(@"D:\My\Desktop\tmp\index.txt", text, Encoding.GetEncoding(response.CharacterSet));
                     doc.Load(reader);
-
-                    //byte[] text = ReadFully(reader.BaseStream);
-
-                    //text = Encoding.Convert(Encoding.GetEncoding(response.CharacterSet), Encoding.UTF8, text);
-
-                    //File.WriteAllBytes(@"D:\My\Desktop\tmp\index.txt", text);
-
-                    //doc.Load(@"D:\My\Desktop\tmp\index.txt");
                     charset = response.CharacterSet;
-
                 }
             }
             return new Tuple<HtmlDocument, string>(doc, charset);
