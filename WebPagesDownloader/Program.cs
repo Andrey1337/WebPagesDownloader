@@ -103,9 +103,10 @@ namespace WebPagesDownloader
             const string pageUrl = "https://stackoverflow.com/questions/8606793/how-do-i-convert-streamreader-to-a-string";
             const string downloadDir = @"D:\My\Desktop\tmp\";
 
-            var tuple = GetHtmlDocument(pageUrl);
-            var document = tuple.Item1;
-
+            //var tuple = GetHtmlDocument(pageUrl);
+            //var document = tuple.Item1;
+            var web = new HtmlWeb();
+            var document = web.Load(pageUrl);
 
             //creates folder with all images and scripts
             var fileName = GetFileName(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
