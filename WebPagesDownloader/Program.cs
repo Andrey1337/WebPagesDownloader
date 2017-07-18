@@ -38,20 +38,26 @@ namespace WebPagesDownloader
             foreach (var node in document.DocumentNode.SelectNodes(nodeName))
             {
                 var link = node.GetAttributeValue(subNodeName, null);
+
                 if (link == null)
                     continue;
+
                 if (arg != "default")
                     link = Path.GetFileNameWithoutExtension(GetFileName(link)) + arg;
 
                 if (linkCounter.ContainsKey(GetFileName(link)))
                 {
                     linkCounter[GetFileName(link)]++;
-                    node.SetAttributeValue(subNodeName, filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + linkCounter[GetFileName(link)] + Path.GetExtension(GetFileName(link)));
+                    string pathName = Path.Combine(filesPath,
+                        Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + linkCounter[GetFileName(link)] +
+                        Path.GetExtension(GetFileName(link)));
+                    node.SetAttributeValue(subNodeName, pathName);
                 }
                 else
                 {
                     linkCounter.Add(GetFileName(link), 1);
-                    node.SetAttributeValue(subNodeName, filesPath + @"\" + Path.GetFileName(GetFileName(link)));
+                    string pathName = Path.Combine(filesPath, Path.GetFileName(GetFileName(link)));
+                    node.SetAttributeValue(subNodeName, pathName);
                 }
             }
         }
