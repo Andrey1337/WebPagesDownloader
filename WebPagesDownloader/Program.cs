@@ -17,7 +17,7 @@ using HtmlAgilityPack;
 namespace WebPagesDownloader
 {
     class Program
-    {        
+    {
         public static string GetAbsoluteUrl(string baseLink, string myLink)
         {
             Uri baseUri = new Uri(baseLink);
@@ -38,23 +38,30 @@ namespace WebPagesDownloader
             foreach (var node in document.DocumentNode.SelectNodes(nodeName))
             {
                 var link = node.GetAttributeValue(subNodeName, null);
+
                 if (link == null)
                     continue;
-                if (arg != "default")
-                    link = Path.GetFileNameWithoutExtension(GetFileName(link)) + arg;
 
-                if (linkCounter.ContainsKey(GetFileName(link)))
+                if (arg != "default")
+                    link = Path.GetFileNameWithoutExtension(GetFileNameFromLink(link)) + arg;
+
+                if (linkCounter.ContainsKey(GetFileNameFromLink(link)))
                 {
-                    linkCounter[GetFileName(link)]++;
-                    node.SetAttributeValue(subNodeName, filesPath + @"\" + Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + linkCounter[GetFileName(link)] + Path.GetExtension(GetFileName(link)));
+                    linkCounter[GetFileNameFromLink(link)]++;
+                    string pathName = Path.Combine(filesPath,
+                        Path.GetFileNameWithoutExtension(GetFileNameFromLink(link)) + "_" + linkCounter[GetFileNameFromLink(link)] +
+                        Path.GetExtension(GetFileNameFromLink(link)));
+                    node.SetAttributeValue(subNodeName, pathName);
                 }
                 else
                 {
-                    linkCounter.Add(GetFileName(link), 1);
-                    node.SetAttributeValue(subNodeName, filesPath + @"\" + Path.GetFileName(GetFileName(link)));
+                    linkCounter.Add(GetFileNameFromLink(link), 1);
+                    string pathName = Path.Combine(filesPath, Path.GetFileName(GetFileNameFromLink(link)));
+                    node.SetAttributeValue(subNodeName, pathName);
                 }
             }
         }
+
 
         public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
         {
@@ -65,7 +72,7 @@ namespace WebPagesDownloader
                 {
                     using (WebClient client = new WebClient())
                     {
-                        string path = GetFileName(item);
+                        string path = GetFileNameFromLink(item);
 
                         if (extension != "default")
                         {
@@ -94,16 +101,18 @@ namespace WebPagesDownloader
 
         private static void Main(string[] args)
         {
-            const string pageUrl = "https://stackoverflow.com/questions/8606793/how-do-i-convert-streamreader-to-a-string";
+            const string pageUrl = "https://stackoverflow.com/questions/60174/how-can-i-prevent-sql-injection-in-php?noredirect=1&lq=1";
             const string downloadDir = @"D:\My\Desktop\tmp\";
 
-            var tuple = GetHtmlDocument(pageUrl);
-            var document = tuple.Item1;
+            //var tuple = GetHtmlDocument(pageUrl);
+            //var document = tuple.Item1;
+            var web = new HtmlWeb();
+            var document = web.Load(pageUrl);
 
 
             //creates folder with all images and scripts
-            var fileName = GetFileName(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
-            Console.WriteLine(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
+            var fileName = GetFileNameFromTitle(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
+
             var path = downloadDir + fileName + ".html";
             var folderPath = fileName + "_files";
             var filesPath = downloadDir + folderPath;
@@ -131,13 +140,17 @@ namespace WebPagesDownloader
             File.WriteAllText(path, document.DocumentNode.OuterHtml);
         }
 
-        public static string GetFileName(string url)
+        public static string GetFileNameFromLink(string url)
         {
             var lastPartOfUrlRegex = new Regex("[^/]+(?=/$|$)");
-            var lastPart = lastPartOfUrlRegex.Match(url).Result("$0");
-            var fileName = lastPart.Split('?')[0];
-            var regex = new Regex(@"[\\/:*?""<>|]");
-            return regex.Replace(fileName, "");
+            var lastPart = lastPartOfUrlRegex.Match(url).Result("$0");                              
+            var fileName = Path.GetFileName(lastPart);                   
+            return new Regex(@"[\\/:*?<>|]").Replace(fileName, "");
+        }
+
+        public static string GetFileNameFromTitle(string url)
+        {
+            return new Regex(@"[\\/:*?<>|]").Replace(url, "");
         }
 
         public static Tuple<HtmlDocument, string> GetHtmlDocument(string url)
