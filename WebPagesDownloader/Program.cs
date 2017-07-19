@@ -42,80 +42,80 @@ namespace WebPagesDownloader
                 if (link == null)
                     continue;
 
+                string fileName = GetFileNameFromLink(link);
                 if (arg != "default")
-                    link = Path.GetFileNameWithoutExtension(GetFileName(link)) + arg;
+                    fileName = Path.GetFileNameWithoutExtension(fileName) + arg;
 
-                if (linkCounter.ContainsKey(GetFileName(link)))
+                if (linkCounter.ContainsKey(fileName))
                 {
-                    linkCounter[GetFileName(link)]++;
+                    linkCounter[fileName]++;
                     string pathName = Path.Combine(filesPath,
-                        Path.GetFileNameWithoutExtension(GetFileName(link)) + "_" + linkCounter[GetFileName(link)] +
-                        Path.GetExtension(GetFileName(link)));
+                        Path.GetFileNameWithoutExtension(fileName) + "_" + linkCounter[fileName] +
+                        Path.GetExtension(fileName));
                     node.SetAttributeValue(subNodeName, pathName);
                 }
                 else
                 {
-                    linkCounter.Add(GetFileName(link), 1);
-                    string pathName = Path.Combine(filesPath, Path.GetFileName(GetFileName(link)));
+                    linkCounter.Add(fileName, 1);
+                    string pathName = Path.Combine(filesPath, Path.GetFileName(fileName));
                     node.SetAttributeValue(subNodeName, pathName);
                 }
             }
         }
 
+
         public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
         {
             var sameLinksCounter = new Dictionary<string, int>();
-            foreach (var item in linksUrlList)
+            foreach (var link in linksUrlList)
             {
                 try
                 {
                     using (WebClient client = new WebClient())
                     {
-                        string path = GetFileName(item);
+                        string fileName = GetFileNameFromLink(link);
 
                         if (extension != "default")
                         {
-                            path = Path.GetFileNameWithoutExtension(path) + extension;
+                            fileName = Path.GetFileNameWithoutExtension(fileName) + extension;
                         }
 
-                        if (!sameLinksCounter.ContainsKey(path))
+                        if (!sameLinksCounter.ContainsKey(fileName))
                         {
-                            sameLinksCounter.Add(path, 1);
-                            client.DownloadFile(item, filesPath + @"\" + path);
+                            sameLinksCounter.Add(fileName, 1);
+                            client.DownloadFile(link, filesPath + @"\" + fileName);
                         }
                         else
                         {
-                            sameLinksCounter[path]++;
-                            client.DownloadFile(item, filesPath + @"\" + Path.GetFileNameWithoutExtension(path) + "_" + sameLinksCounter[path] + Path.GetExtension(path));
+                            sameLinksCounter[fileName]++;
+                            client.DownloadFile(link, filesPath + @"\" + Path.GetFileNameWithoutExtension(fileName) + "_" + sameLinksCounter[fileName] + Path.GetExtension(fileName));
                         }
                     }
-                    Console.WriteLine("Succes to download: " + item);
+                    Console.WriteLine("Succes to download:" + link);
                 }
                 catch (Exception exception)
                 {
-                    Console.WriteLine("Error while downloading file from: " + item + "\n exception: " + exception);
+                    Console.WriteLine(GetFileNameFromLink(link));
+                    Console.WriteLine("Error while downloading file from: " + link + "\n exception: " + exception);
                 }
             }
         }
 
         private static void Main(string[] args)
         {
-            const string pageUrl = "https://stackoverflow.com/questions/8606793/how-do-i-convert-streamreader-to-a-string";
-            const string downloadDir = @"D:\My\Desktop\tmp\";
+            string pageUrl = ConfigurationManager.AppSettings.Get("pageUrl");
+            string downloadDir = @"D:\My\Desktop\tmp";
 
-            //var tuple = GetHtmlDocument(pageUrl);
-            //var document = tuple.Item1;
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
 
-            //creates folder with all images and scripts
-            var fileName = GetFileName(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
-            Console.WriteLine(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
+            //<---Creates folder with all images and scripts--->
+            var fileName = GetFileNameFromTitle(document.DocumentNode.SelectSingleNode("//title").InnerHtml);
+
             var path = downloadDir + fileName + ".html";
             var folderPath = fileName + "_files";
             var filesPath = downloadDir + folderPath;
             Directory.CreateDirectory(filesPath);
-
 
             //<---Search links of images and css--->
             var imageLinks = GetLinksWithArgument(document, pageUrl, "//img", "src");
@@ -130,7 +130,6 @@ namespace WebPagesDownloader
             Console.WriteLine("Scripts:");
             LinkDownloader(scriptLinks, filesPath);
 
-
             //<---Change SubNodes--->
             ChangeSubNodesInHtml(document, folderPath, "//img", "src");
             ChangeSubNodesInHtml(document, folderPath, "//link[@rel='stylesheet']", "href", ".css");
@@ -138,46 +137,17 @@ namespace WebPagesDownloader
             File.WriteAllText(path, document.DocumentNode.OuterHtml);
         }
 
-        public static string GetFileName(string url)
+        public static string GetFileNameFromLink(string url)
         {
             var lastPartOfUrlRegex = new Regex("[^/]+(?=/$|$)");
             var lastPart = lastPartOfUrlRegex.Match(url).Result("$0");
             var fileName = lastPart.Split('?')[0];
-            var regex = new Regex(@"[\\/:*?""<>|]");
-            return regex.Replace(fileName, "");
+            return new Regex(@"[\\/:""*?<>|]").Replace(fileName, "");
         }
 
-        public static Tuple<HtmlDocument, string> GetHtmlDocument(string url)
+        public static string GetFileNameFromTitle(string url)
         {
-            string charset;
-            var webRequest = (HttpWebRequest)WebRequest.Create(url);
-            HtmlDocument doc = new HtmlDocument();
-            using (HttpWebResponse response = (HttpWebResponse)webRequest.GetResponse())
-            {
-                using (var reader = new StreamReader(response.GetResponseStream()))
-                {
-                    //var text = reader.ReadToEnd();
-                    //File.WriteAllText(@"D:\My\Desktop\tmp\index.txt", text, Encoding.GetEncoding(response.CharacterSet));
-                    doc.Load(reader);
-                    charset = response.CharacterSet;
-                }
-            }
-            return new Tuple<HtmlDocument, string>(doc, charset);
+            return new Regex(@"[\\/:*?<>|]").Replace(url, "");
         }
-
-        public static byte[] ReadFully(Stream input)
-        {
-            byte[] buffer = new byte[16 * 1024];
-            using (MemoryStream ms = new MemoryStream())
-            {
-                int read;
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                }
-                return ms.ToArray();
-            }
-        }
-
     }
 }
