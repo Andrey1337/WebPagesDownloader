@@ -91,7 +91,7 @@ namespace WebPagesDownloader
                             client.DownloadFile(link, filesPath + @"\" + Path.GetFileNameWithoutExtension(fileName) + "_" + sameLinksCounter[fileName] + Path.GetExtension(fileName));
                         }
                     }
-                    Console.WriteLine("Succes to download:" + link );
+                    Console.WriteLine("Succes to download:" + link);
                 }
                 catch (Exception exception)
                 {
@@ -104,7 +104,7 @@ namespace WebPagesDownloader
         private static void Main(string[] args)
         {
             string pageUrl = ConfigurationManager.AppSettings.Get("pageUrl");
-            string downloadDir = ConfigurationManager.AppSettings.Get("downloadPath");
+            const string downloadDir = @"D:\My\Desktop\tmp\";
 
             //var tuple = GetHtmlDocument(pageUrl);
             //var document = tuple.Item1;
@@ -168,6 +168,6 @@ namespace WebPagesDownloader
                 }
             }
             return new Tuple<HtmlDocument, string>(doc, charset);
-        }            
+        }
     }
 }
