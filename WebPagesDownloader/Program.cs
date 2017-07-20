@@ -103,8 +103,8 @@ namespace WebPagesDownloader
 
         private static void Main(string[] args)
         {
-            string pageUrl = ConfigurationManager.AppSettings.Get("pageUrl");
-            string downloadDir = @"D:\My\Desktop\tmp";
+            var pageUrl = ConfigurationManager.AppSettings.Get("pageUrl");
+            var downloadDir = @"D:\My\Desktop\tmp";
 
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
