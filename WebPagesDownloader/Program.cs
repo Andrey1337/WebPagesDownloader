@@ -25,10 +25,10 @@ namespace WebPagesDownloader
             return myUri.ToString();
         }
 
-        public static List<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string nodeName, string subNodeName)
+        public static IEnumerable<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string nodeName, string subNodeName)
         {
             return document.DocumentNode.SelectNodes(nodeName).Select(link => link.Attributes[subNodeName]?.Value)
-                .Select(link => GetAbsoluteUrl(pageUrl, link)).ToList();
+                .Select(link => GetAbsoluteUrl(pageUrl, link));
         }
 
         public static void ChangeSubNodesInHtml(HtmlDocument document, string filesPath, string nodeName, string subNodeName, string arg = "default")
@@ -63,8 +63,7 @@ namespace WebPagesDownloader
             }
         }
 
-
-        public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
+        public static void LinkDownloader(IEnumerable<string> linksUrlList, string filesPath, string extension = "default")
         {
             var sameLinksCounter = new Dictionary<string, int>();
             foreach (var link in linksUrlList)
