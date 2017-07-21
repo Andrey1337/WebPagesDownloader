@@ -25,10 +25,10 @@ namespace WebPagesDownloader
             return myUri.ToString();
         }
 
-        public static List<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string nodeName, string subNodeName)
+        public static IEnumerable<string> GetLinksWithArgument(HtmlDocument document, string pageUrl, string nodeName, string subNodeName)
         {
             return document.DocumentNode.SelectNodes(nodeName).Select(link => link.Attributes[subNodeName]?.Value)
-                .Select(link => GetAbsoluteUrl(pageUrl, link)).ToList();
+                .Select(link => GetAbsoluteUrl(pageUrl, link));
         }
 
         public static void ChangeSubNodesInHtml(HtmlDocument document, string filesPath, string nodeName, string subNodeName, string arg = "default")
@@ -63,8 +63,7 @@ namespace WebPagesDownloader
             }
         }
 
-
-        public static void LinkDownloader(List<string> linksUrlList, string filesPath, string extension = "default")
+        public static void LinkDownloader(IEnumerable<string> linksUrlList, string filesPath, string extension = "default")
         {
             var sameLinksCounter = new Dictionary<string, int>();
             foreach (var link in linksUrlList)
@@ -103,11 +102,9 @@ namespace WebPagesDownloader
 
         private static void Main(string[] args)
         {
-            string pageUrl = ConfigurationManager.AppSettings.Get("pageUrl");
-            const string downloadDir = @"D:\My\Desktop\tmp\";
+            var pageUrl = ConfigurationManager.AppSettings.Get("pageUrl");
+            var downloadDir = @"D:\My\Desktop\tmp";
 
-            //var tuple = GetHtmlDocument(pageUrl);
-            //var document = tuple.Item1;
             var web = new HtmlWeb();
             var document = web.Load(pageUrl);
 
@@ -150,24 +147,6 @@ namespace WebPagesDownloader
         public static string GetFileNameFromTitle(string url)
         {
             return new Regex(@"[\\/:*?<>|]").Replace(url, "");
-        }
-
-        public static Tuple<HtmlDocument, string> GetHtmlDocument(string url)
-        {
-            string charset;
-            var webRequest = (HttpWebRequest)WebRequest.Create(url);
-            HtmlDocument doc = new HtmlDocument();
-            using (HttpWebResponse response = (HttpWebResponse)webRequest.GetResponse())
-            {
-                using (var reader = new StreamReader(response.GetResponseStream()))
-                {
-                    //var text = reader.ReadToEnd();
-                    //File.WriteAllText(@"D:\My\Desktop\tmp\index.txt", text, Encoding.GetEncoding(response.CharacterSet));
-                    doc.Load(reader);
-                    charset = response.CharacterSet;
-                }
-            }
-            return new Tuple<HtmlDocument, string>(doc, charset);
         }
     }
 }
